@@ -1,6 +1,7 @@
 import tkinter as tk
 import time
 from tkinter import ttk
+from tkinter import messagebox
 import requests
 import webbrowser
 import random
@@ -53,6 +54,8 @@ class RobloxServerBrowser:
 
         self.frame = tk.Frame(self.root)
         self.last_box=tk.Label(self.frame, text="Last visited is NONE")
+        self.place_id=tk.Text(self.frame, height=1, width=15)
+        self.confirm_btn=tk.Button(self.frame, text="<<<", command=self.confirmation, bg="#000000", fg="#ffffff")
         self.botpage_btn=tk.Button(self.frame, text="BotConfig", command=self.botconfigpage, bg="#AF4C4C", fg="#ffffff")
         self.refresh_btn = tk.Button(self.frame, text="Refresh Servers", command=self.get_servers, bg="#4CAF50", fg="#ffffff")
         self.join_btn = tk.Button(self.frame, text="Join Selected", command=self.join_selected, bg="#2196F3", fg="#ffffff")
@@ -66,8 +69,11 @@ class RobloxServerBrowser:
         self.root.grid_rowconfigure(0, weight=0)
         self.root.grid_rowconfigure(1, weight=0)
         self.root.grid_rowconfigure(2, weight=1)
-        self.root.grid_columnconfigure(0, weight=1)
+        self.root.grid_columnconfigure(0, weight=0)
+        
         self.last_box.pack(side="left", padx=5)
+        self.place_id.pack(side="left", padx=5)
+        self.confirm_btn.pack(side="left", padx=5)
         self.botpage_btn.pack(side="right", padx=5)
         self.refresh_btn.pack(side="right", padx=5)
         self.join_btn.pack(side="right", padx=5)
@@ -105,13 +111,14 @@ class RobloxServerBrowser:
                 s["maxPlayers"],
                 False
             ), tags=('even' if i % 2 == 0 else 'odd',))
+            self.confirm_btn.config(bg="#FFFFFF")
             self.refresh_btn.config(bg="#204D22")
-        self.root.after(10000, self.reset_cooldown)
+        self.root.after(20000, self.reset_cooldown)
         self.refresh_cooldown = True
     def reset_cooldown(self):
         self.refresh_cooldown = False
         self.refresh_btn.config(bg="#4CAF50")
-
+        self.confirm_btn.config(bg="#000000")
     def join_selected(self):
         global last_visited
         global last_server_id
@@ -169,7 +176,6 @@ class RobloxServerBrowser:
                 if s["id"] == last_server_id:
                     self.table.item(i, values=(i+1,s["playing"], s["maxPlayers"], True),tags=("last"))
                     last_visited=i+1
-                    self.last_box['text']=f"Last visited is with index {last_visited}"
             webbrowser.open(url)
         
     def get_game_name(self):
@@ -211,6 +217,28 @@ class RobloxServerBrowser:
         except Exception as e:
             print(f"Error loading image: {e}")
             return False
+        
+        
+    def confirmation(self):
+        if self.refresh_cooldown:
+            return
+        global PLACE_ID, url, data
+        new_place_id = self.place_id.get("1.0", tk.END).strip()
+        if new_place_id == '':
+            self.place_id.insert("1.0", "147848991")
+            new_place_id="147848991"
+        if not new_place_id.isdigit():
+            messagebox.showerror("Error", "Place ID must be a number.")
+            return
+        PLACE_ID = int(new_place_id)
+        url = f"https://games.roblox.com/v1/games/{PLACE_ID}/servers/Public?limit=100"
+        data = requests.get(url).json()
+        self.mainpage()
+        self.get_servers()
+        self.confirm_btn.config(bg="#FFFFFF")
+        self.refresh_btn.config(bg="#204D22")
+        self.root.after(20000, self.reset_cooldown)
+        self.refresh_cooldown = True
     def run(self):
         self.root.mainloop()
 if __name__ == "__main__":
